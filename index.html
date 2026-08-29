@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAFIA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#121210; --bg-elevated:#191916; --border:#2c2c28; --border-soft:#232320;
+    --text:#efe9dc; --text-dim:#8c887d; --text-faint:#5c5950;
+    --cream:#ece6d7; --cream-text:#17140f; --danger:#bd4a3a; --danger-text:#f7ece8;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);}
+  body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:0.01em;}
+  .app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);border-left:1px solid var(--border-soft);border-right:1px solid var(--border-soft);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+  .logo{font-size:14px;letter-spacing:0.18em;font-weight:700;text-transform:uppercase;}
+  .timer{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;color:var(--text-dim);}
+  .btn{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:13px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);padding:12px 18px;cursor:pointer;text-align:center;}
+  .btn:active{opacity:0.8;}
+  .btn-sm{padding:8px 14px;font-size:12px;border-radius:8px;}
+  .btn-block{width:100%;display:block;padding:16px 18px;font-size:14px;}
+  .btn-cream{background:var(--cream);color:var(--cream-text);border-color:var(--cream);}
+  .btn-danger{background:var(--danger);color:var(--danger-text);border-color:var(--danger);}
+  .btn-ghost{background:var(--bg-elevated);}
+  .btn[disabled]{opacity:0.35;cursor:not-allowed;}
+  .content{flex:1;padding:20px 18px 32px;font-size:14px;}
+  .back-row{display:flex;align-items:center;gap:16px;margin-bottom:24px;}
+  .screen-title{font-size:21px;margin:0;}
+  .lede{color:var(--text-dim);font-size:15px;line-height:1.5;margin:0 0 20px;}
+  .field{margin-bottom:20px;}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-dim);margin-bottom:8px;font-weight:600;}
+  .field input[type=text]{width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:14px 16px;color:var(--text);font-size:15px;font-family:inherit;}
+  .field input:focus{outline:none;border-color:var(--text-dim);}
+  .clan-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .clan-opt{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;background:var(--bg-elevated);}
+  .clan-opt.selected{border-color:var(--text);}
+  .clan-opt.selected-a{border-color:var(--danger);}
+  .clan-opt.selected-b{border-color:#7fb77a;}
+  .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .radio-row{display:flex;align-items:flex-start;gap:14px;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer;background:var(--bg-elevated);}
+  .radio-row.selected{border-color:var(--text);}
+  .radio-title{font-weight:700;font-size:15px;font-family:'Space Grotesk',sans-serif;margin-bottom:3px;}
+  .radio-sub{font-size:13px;color:var(--text-dim);}
+  .limit-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+  .limit-opt{border:1px solid var(--border);border-radius:10px;padding:14px 0;text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;cursor:pointer;background:var(--bg-elevated);}
+  .limit-opt.selected{background:var(--cream);color:var(--cream-text);border-color:var(--cream);}
+  .limit-grid-3{grid-template-columns:repeat(3,1fr);}
+  .section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-dim);font-weight:600;margin:22px 0 10px;}
+  .room-code-box{border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:8px;}
+  .room-code-label{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-dim);margin-bottom:8px;font-weight:600;}
+  .room-code{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:0.08em;margin-bottom:14px;}
+  .helper{color:var(--text-dim);font-size:13px;margin:14px 0 20px;}
+  .count-label{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-dim);font-weight:600;margin-bottom:10px;}
+  .clan-group{margin-bottom:18px;}
+  .clan-group-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:700;font-size:13px;letter-spacing:0.08em;font-family:'Space Grotesk',sans-serif;}
+  .player-row{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;background:var(--bg-elevated);font-size:14px;}
+  .player-row.dim{color:var(--text-faint);}
+  .avatar{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;margin-right:10px;flex-shrink:0;color:#17140f;font-family:'Space Grotesk',sans-serif;}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-weight:700;color:var(--text-dim);margin-left:6px;}
+  .tag-out{color:var(--danger);border-color:var(--danger);}
+  .tag-leader{color:var(--danger);border-color:var(--danger);}
+  .banner{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:18px 0;font-size:13px;color:var(--text-dim);border-left:3px solid var(--text-dim);}
+  .banner-error{border-left-color:var(--danger);color:var(--text);}
+  .role-card{border:1px solid var(--danger);background:rgba(189,74,58,0.08);border-radius:var(--radius);padding:28px 22px;margin-bottom:22px;}
+  .role-card .role-name{font-size:28px;line-height:1;margin-bottom:10px;}
+  .role-card .role-desc{color:var(--text-dim);font-size:14px;}
+  .vote-opt{display:flex;align-items:center;gap:14px;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;background:var(--bg-elevated);font-weight:600;font-size:15px;}
+  .vote-opt.selected{border-color:var(--cream);}
+  .final-row{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding:16px 2px;font-size:14px;}
+  .final-row:first-of-type{border-top:1px solid var(--border);}
+  .win-banner{font-size:22px;font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:6px;}
+  .win-mafia{color:var(--danger);}
+  .win-town{color:#7fb77a;}
+  .win-jester{color:#c9a24a;}
+  .link-btn{background:none;border:none;color:var(--text-dim);text-decoration:underline;font-size:13px;cursor:pointer;padding:0;font-family:'Inter',sans-serif;}
+  .proto-note{text-align:center;color:var(--text-faint);font-size:11px;margin-top:20px;letter-spacing:0.02em;}
+  .stack{display:flex;flex-direction:column;gap:10px;}
+  .chat-box{border:1px solid var(--border);border-radius:10px;background:var(--bg-elevated);margin-bottom:16px;}
+  .chat-head{padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;color:var(--text-dim);border-bottom:1px solid var(--border);}
+  .chat-log{max-height:180px;overflow-y:auto;padding:10px 14px;}
+  .chat-msg{font-size:13px;margin-bottom:8px;}
+  .chat-msg b{color:var(--text);}
+  .chat-input-row{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);}
+  .chat-input-row input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;}
+  .chat-mafia .chat-head{color:var(--danger);}
+</style>
+</head>
+<body>
+<div id="app" class="app"><div class="content" style="text-align:center;padding-top:80px;color:var(--text-dim);">Loading&hellip;</div></div>
+
+<script>
+const SUPABASE_URL = "https://twtrkxmtnydjnshyagyw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3dHJreG10bnlkam5zaHlhZ3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4MDcwMTUsImV4cCI6MjEwMzM4MzAxNX0.iVkDzqY1PSeONfs5mGQQqEjVq8AQxVztCFeSnZJ_pO0";
+const SESSION_KEY = "mafia_session_v1";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const NIGHT_ROLES = ['MAFIA','DOCTOR','BODYGUARD'];
+const ROLE_DESC = {
+  MAFIA:'Eliminate the town before they find you.',
+  DOCTOR:'Protect one player from elimination each night.',
+  BODYGUARD:'Protect one player from elimination each night.',
+  JESTER:'Win by getting yourself voted out during the Day.',
+  CIVILIAN:'No special powers. Vote wisely.'
+};
+const MODES = [
+  {id:'classic', title:'CLASSIC MAFIA', sub:'Roles are randomly assigned.'},
+  {id:'clanwars', title:'CLAN WARS', sub:'One clan secretly becomes the Mafia team.'},
+  {id:'randomclans', title:'RANDOM CLANS', sub:'Clan identity does not affect roles.'},
+  {id:'clanvsclan', title:'CLAN VS CLAN', sub:'Two clans compete against each other.'},
+  {id:'chaos', title:'CHAOS', sub:'Special roles and unpredictable rules.'}
+];
+
+let state = {
+  screen: 'home', clans: [], room: null, players: [], isHost: false, myPlayerId: null,
+  joinForm: { code:'', name:'', clan:'' },
+  hostSetup: { mode:'classic', limit:8, name:'', clan:'', nightSeconds:120, daySeconds:300, voteSeconds:60, mafiaClan:null, teamClans:[] },
+  error: null, channel: null,
+  myRole: null, myTeam: null, myLeader:false, roleSeen: false, lastRound: 0,
+  nightChoice: null, voteChoice: null,
+  messages: [], chatDraft: '', mafiaChatDraft: '', deadChatDraft: '',
+  pollTimer: null, tickTimer: null, finalRoles: undefined
+};
+
+async function boot(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session){
+    const { error } = await sb.auth.signInAnonymously();
+    if (error){ state.error = 'Could not connect: ' + error.message; render(); return; }
+  }
+  const { data: clanRows } = await sb.from('clans').select('*').eq('is_active', true).order('name');
+  state.clans = clanRows || [];
+  if (state.clans[0]){ state.joinForm.clan = state.clans[0].id; state.hostSetup.clan = state.clans[0].id; }
+  const savedName = localStorage.getItem('mafia_saved_name');
+  if (savedName){ state.joinForm.name = savedName; state.hostSetup.name = savedName; }
+
+  const saved = localStorage.getItem(SESSION_KEY);
+  if (saved){
+    try {
+      const { roomId } = JSON.parse(saved);
+      const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).maybeSingle();
+      const { data: { user } } = await sb.auth.getUser();
+      if (room){
+        const { data: player } = await sb.from('players').select('*').eq('room_id', roomId).eq('auth_user_id', user.id).maybeSingle();
+        if (player){
+          state.room = room; state.myPlayerId = player.id; state.isHost = player.is_host;
+          state.roleSeen = localStorage.getItem('mafia_role_ack_'+room.id) === 'true';
+          await refreshPlayers(); subscribeToRoom(); render();
+          if (room.status === 'active') startLiveGame();
+          return;
+        }
+      }
+      localStorage.removeItem(SESSION_KEY);
+    } catch(e){ localStorage.removeItem(SESSION_KEY); }
+  }
+  render();
+}
+
+function clanById(id){ return state.clans.find(c => c.id === id) || { name:id, color:'#efe9dc' }; }
+function avatarHtml(p){
+  const clan = clanById(p.clan_id);
+  const initial = (p.name||'?').trim().charAt(0).toUpperCase() || '?';
+  return '<span class="avatar" style="background:'+(clan.color||'#efe9dc')+'">'+initial+'</span>';
+}
+function saveSession(){ localStorage.setItem(SESSION_KEY, JSON.stringify({ roomId: state.room.id })); }
+
+/* ---------- room creation / joining ---------- */
+async function createRoom(){
+  state.error = null;
+  const hs = state.hostSetup;
+  const name = hs.name.trim();
+  if (!name){ state.error = 'Enter your name before creating a room.'; render(); return; }
+  if (hs.mode === 'clanvsclan' && hs.teamClans.length !== 2){ state.error = 'Select exactly two clans for Clan vs Clan.'; render(); return; }
+
+  const settings = { night_seconds: hs.nightSeconds, day_seconds: hs.daySeconds, vote_seconds: hs.voteSeconds };
+  if (hs.mode === 'clanvsclan'){ settings.clan_a = hs.teamClans[0]; settings.clan_b = hs.teamClans[1]; }
+
+  const code = Math.random().toString(36).slice(2,8).toUpperCase();
+  const { data: { user } } = await sb.auth.getUser();
+  const { data: room, error: roomErr } = await sb.from('rooms')
+    .insert({ code, mode: hs.mode, player_limit: hs.limit, settings }).select().single();
+  if (roomErr){ state.error = roomErr.message; render(); return; }
+  const { data: player, error: playerErr } = await sb.from('players')
+    .insert({ room_id: room.id, auth_user_id: user.id, name, clan_id: hs.clan, is_host: true }).select().single();
+  if (playerErr){ state.error = playerErr.message; render(); return; }
+  state.room = room; state.isHost = true; state.myPlayerId = player.id;
+  saveSession();
+  await enterLobby();
+}
+
+async function joinRoom(){
+  state.error = null;
+  const code = state.joinForm.code.trim().toUpperCase();
+  const name = state.joinForm.name.trim();
+  if (!code || !name){ state.error = 'Enter a game code and your name.'; render(); return; }
+  const { data: room, error: roomErr } = await sb.from('rooms').select('*').eq('code', code).single();
+  if (roomErr || !room){ state.error = 'No room found with that code.'; render(); return; }
+  if (room.status !== 'lobby'){ state.error = 'This game has already started.'; render(); return; }
+  const { data: { user } } = await sb.auth.getUser();
+  const { data: player, error: playerErr } = await sb.from('players')
+    .insert({ room_id: room.id, auth_user_id: user.id, name, clan_id: state.joinForm.clan }).select().single();
+  if (playerErr){
+    if (playerErr.code === '23505'){
+      const { data: existing } = await sb.from('players').select('*').eq('room_id', room.id).eq('auth_user_id', user.id).maybeSingle();
+      if (existing){ state.room = room; state.isHost = false; state.myPlayerId = existing.id; saveSession(); await enterLobby(); return; }
+    }
+    state.error = 'Could not join: ' + playerErr.message; render(); return;
+  }
+  state.room = room; state.isHost = false; state.myPlayerId = player.id;
+  saveSession();
+  await enterLobby();
+}
+
+async function enterLobby(){
+  await refreshPlayers();
+  subscribeToRoom();
+  render();
+  if (state.room.status === 'active') startLiveGame();
+}
+
+async function refreshPlayers(){
+  const { data } = await sb.from('players').select('*').eq('room_id', state.room.id).order('joined_at');
+  state.players = data || [];
+}
+async function fetchMyRole(){
+  const { data } = await sb.from('player_roles').select('*').eq('player_id', state.myPlayerId).maybeSingle();
+  if (data){ state.myRole = data.role; state.myTeam = data.team; state.myLeader = data.is_leader; }
+}
+async function loadMessages(){
+  const { data } = await sb.from('messages').select('*').eq('room_id', state.room.id).order('created_at');
+  state.messages = data || [];
+}
+function subscribeToRoom(){
+  if (state.channel) sb.removeChannel(state.channel);
+  state.channel = sb.channel('room-' + state.room.id)
+    .on('postgres_changes', { event:'*', schema:'public', table:'players', filter:'room_id=eq.'+state.room.id },
+      async () => { await refreshPlayers(); render(); })
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'rooms', filter:'id=eq.'+state.room.id },
+      async (payload) => { await onRoomUpdate(payload.new); })
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'player_roles', filter:'room_id=eq.'+state.room.id },
+      async () => { await fetchMyRole(); render(); })
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter:'room_id=eq.'+state.room.id },
+      (payload) => { appendChatMessage(payload.new); })
+    .subscribe();
+}
+function appendChatMessage(msg){
+  state.messages.push(msg);
+  const log = document.getElementById('chatlog-'+msg.channel);
+  if (!log) return;
+  const p = state.players.find(pp=>pp.id===msg.sender_player_id);
+  const div = document.createElement('div');
+  div.className = 'chat-msg';
+  div.innerHTML = '<b>'+escapeHtml(p?p.name:'?')+':</b> '+escapeHtml(msg.content);
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+async function onRoomUpdate(newRoom){
+  const wasLobby = state.room.status === 'lobby';
+  state.room = newRoom;
+  if (newRoom.round_number !== state.lastRound){
+    state.nightChoice = null; state.voteChoice = null;
+    state.lastRound = newRoom.round_number;
+  }
+  if (wasLobby && newRoom.status === 'active') startLiveGame();
+  render();
+}
+function updateTimerDisplay(){
+  const el = document.getElementById('timerDisplay');
+  if (el) el.textContent = timeLeft();
+}
+function startLiveGame(){
+  fetchMyRole().then(render);
+  loadMessages();
+  if (!state.pollTimer) state.pollTimer = setInterval(() => { sb.rpc('resolve_expired_phases').catch(()=>{}); }, 3000);
+  if (!state.tickTimer) state.tickTimer = setInterval(updateTimerDisplay, 1000);
+}
+async function kickPlayer(id){ await sb.from('players').delete().eq('id', id); }
+
+function startGame(){
+  state.error = null;
+  if (state.room.mode === 'clanwars' || state.room.mode === 'clanvsclan'){
+    const distinctClans = new Set(state.players.map(p => p.clan_id)).size;
+    if (distinctClans < 2){ state.error = 'This mode needs players from at least 2 different clans.'; render(); return; }
+  }
+  sb.rpc('start_game', { p_room_id: state.room.id }).then(({error}) => { if (error){ state.error = error.message; render(); } });
+}
+async function submitNightTarget(targetId){
+  state.nightChoice = targetId; render();
+  const { error } = await sb.rpc('submit_night_action', { p_room_id: state.room.id, p_target_player_id: targetId });
+  if (error){ state.error = error.message; }
+  render();
+}
+async function submitVoteChoice(targetId){
+  state.voteChoice = targetId; render();
+  const { error } = await sb.rpc('submit_vote', { p_room_id: state.room.id, p_target_player_id: targetId });
+  if (error){ state.error = error.message; render(); }
+}
+async function sendChat(channel){
+  const draft = channel === 'mafia' ? state.mafiaChatDraft : channel === 'dead' ? state.deadChatDraft : state.chatDraft;
+  if (!draft || !draft.trim()) return;
+  await sb.from('messages').insert({ room_id: state.room.id, sender_player_id: state.myPlayerId, channel, content: draft.trim() });
+  if (channel === 'mafia') state.mafiaChatDraft = ''; else if (channel === 'dead') state.deadChatDraft = ''; else state.chatDraft = '';
+  render();
+}
+function leaveRoom(){
+  if (state.channel) sb.removeChannel(state.channel);
+  if (state.pollTimer) clearInterval(state.pollTimer);
+  if (state.tickTimer) clearInterval(state.tickTimer);
+  localStorage.removeItem(SESSION_KEY);
+  state = { screen:'home', clans: state.clans, room:null, players:[], isHost:false, myPlayerId:null,
+    joinForm: state.joinForm, hostSetup: state.hostSetup, error:null, channel:null,
+    myRole:null, myTeam:null, myLeader:false, roleSeen:false, lastRound:0, nightChoice:null, investigateResult:null,
+    voteChoice:null, messages:[], chatDraft:'', mafiaChatDraft:'', pollTimer:null, tickTimer:null, finalRoles: undefined };
+  render();
+}
+
+/* ---------- ui helpers ---------- */
+function goto(s){ state.screen = s; state.error = null; render(); }
+function setJoinClan(id){ state.joinForm.clan = id; render(); }
+function setMode(id){ state.hostSetup.mode = id; state.hostSetup.mafiaClan=null; state.hostSetup.teamClans=[]; render(); }
+function setLimit(n){ state.hostSetup.limit = n; render(); }
+function setHostClan(id){ state.hostSetup.clan = id; render(); }
+function setMafiaClan(id){ state.hostSetup.mafiaClan = id; render(); }
+function toggleTeamClan(id){
+  const t = state.hostSetup.teamClans;
+  const i = t.indexOf(id);
+  if (i !== -1) t.splice(i,1);
+  else { if (t.length >= 2) t.shift(); t.push(id); }
+  render();
+}
+function setNight(n){ state.hostSetup.nightSeconds = n; render(); }
+function setDay(n){ state.hostSetup.daySeconds = n; render(); }
+function setVote(n){ state.hostSetup.voteSeconds = n; render(); }
+function copyCode(){ navigator.clipboard?.writeText(state.room.code); alert('Room code copied: ' + state.room.code); }
+function fmtSec(s){ return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function timeLeft(){
+  if (!state.room || !state.room.phase_ends_at) return '';
+  const ms = new Date(state.room.phase_ends_at).getTime() - Date.now();
+  if (ms <= 0) return '0:00';
+  const s = Math.floor(ms/1000); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+}
+
+function topbar(){
+  return '<div class="topbar"><div class="logo">MAFIA</div>' +
+    (state.room && state.room.status==='active' ? '<div class="timer" id="timerDisplay">'+timeLeft()+'</div>' : '') +
+    '<button class="btn btn-sm" onclick="leaveRoom()">HOME</button></div>';
+}
+function backRow(title){ return '<div class="back-row"><h1 class="screen-title">'+title+'</h1></div>'; }
+function errBanner(){ return state.error ? '<div class="banner banner-error">'+state.error+'</div>' : ''; }
+
+function screenHome(){
+  return '<div class="topbar"><div class="logo">MAFIA</div><div></div></div>' +
+    '<div class="content"><h1 class="display" style="font-size:32px;margin:8px 0 6px;">MAFIA</h1>' +
+    '<h2 style="font-size:16px;color:var(--text-dim);margin:0 0 16px;font-weight:600;">Trust nobody.</h2>' +
+    '<p class="lede">A multiplayer game of deception, discussion and deduction.</p>' + errBanner() +
+    '<div class="stack"><button class="btn btn-cream btn-block" onclick="goto(\'join\')">JOIN GAME</button>' +
+    '<button class="btn btn-ghost btn-block" onclick="goto(\'host-setup\')">HOST GAME</button></div>' +
+    '<p class="helper">Play with your friends using a private room code.</p></div>';
+}
+function screenJoin(){
+  const jf = state.joinForm;
+  const clanOpts = state.clans.map(c => '<div class="clan-opt '+(jf.clan===c.id?'selected':'')+'" onclick="setJoinClan(\''+c.id+'\')"><span class="dot" style="background:'+c.color+'"></span><span style="font-weight:700;font-family:\'Space Grotesk\',sans-serif;">'+c.name+'</span></div>').join('');
+  return topbar() + '<div class="content">' + backRow('JOIN GAME') + errBanner() +
+    '<div class="field"><label>Game Code</label><input type="text" id="joinCode" value="'+jf.code+'"></div>' +
+    '<div class="field"><label>Your Name</label><input type="text" id="joinName" value="'+jf.name+'"></div>' +
+    '<div class="field"><label>Choose Your Clan</label><div class="clan-grid">'+clanOpts+'</div></div>' +
+    '<button class="btn btn-cream btn-block" onclick="submitJoin()">JOIN GAME</button></div>';
+}
+function submitJoin(){ state.joinForm.code = document.getElementById('joinCode').value; state.joinForm.name = document.getElementById('joinName').value; localStorage.setItem('mafia_saved_name', state.joinForm.name); joinRoom(); }
+
+function screenHostSetup(){
+  const hs = state.hostSetup;
+  const clanOpts = state.clans.map(c => '<div class="clan-opt '+(hs.clan===c.id?'selected':'')+'" onclick="setHostClan(\''+c.id+'\')"><span class="dot" style="background:'+c.color+'"></span><span style="font-weight:700;font-family:\'Space Grotesk\',sans-serif;">'+c.name+'</span></div>').join('');
+  const modeOpts = MODES.map(m => '<div class="radio-row '+(hs.mode===m.id?'selected':'')+'" onclick="setMode(\''+m.id+'\')"><div><div class="radio-title">'+m.title+'</div><div class="radio-sub">'+m.sub+'</div></div></div>').join('');
+  const limits = [6,8,10,12].map(n => '<div class="limit-opt '+(hs.limit===n?'selected':'')+'" onclick="setLimit('+n+')">'+n+'</div>').join('');
+
+  let modeExtra = '';
+  if (hs.mode === 'clanwars'){
+    modeExtra = '<div class="banner">The Mafia clan is chosen at random by the server when the game starts \u2014 not by you, and not shown to anyone in advance.</div>';
+  } else if (hs.mode === 'clanvsclan'){
+    const opts = state.clans.map(c => {
+      const idx = hs.teamClans.indexOf(c.id);
+      const cls = idx===0 ? 'selected-a' : idx===1 ? 'selected-b' : '';
+      return '<div class="clan-opt '+cls+'" onclick="toggleTeamClan(\''+c.id+'\')"><span class="dot" style="background:'+c.color+'"></span><span style="font-weight:700;font-family:\'Space Grotesk\',sans-serif;">'+c.name+'</span></div>';
+    }).join('');
+    modeExtra = '<div class="section-label">Choose Two Clans</div><div class="clan-grid">'+opts+'</div><p class="helper">These two clans will compete. Which one is Mafia is decided at random by the server \u2014 not by pick order.</p>';
+  }
+
+  const nightOpts = [60,120,180].map(n => '<div class="limit-opt '+(hs.nightSeconds===n?'selected':'')+'" onclick="setNight('+n+')">'+fmtSec(n)+'</div>').join('');
+  const dayOpts = [180,300,420].map(n => '<div class="limit-opt '+(hs.daySeconds===n?'selected':'')+'" onclick="setDay('+n+')">'+fmtSec(n)+'</div>').join('');
+  const voteOpts = [30,60,90].map(n => '<div class="limit-opt '+(hs.voteSeconds===n?'selected':'')+'" onclick="setVote('+n+')">'+fmtSec(n)+'</div>').join('');
+
+  return topbar() + '<div class="content">' + backRow('HOST GAME') + errBanner() +
+    '<div class="field"><label>Your Name</label><input type="text" id="hostName" value="'+hs.name+'"></div>' +
+    '<div class="field"><label>Choose Your Clan</label><div class="clan-grid">'+clanOpts+'</div></div>' +
+    '<div class="section-label">Game Mode</div>' + modeOpts + modeExtra +
+    '<div class="section-label">Player Limit</div><div class="limit-grid">'+limits+'</div>' +
+    '<div class="section-label">Night Duration</div><div class="limit-grid limit-grid-3">'+nightOpts+'</div>' +
+    '<div class="section-label">Day Discussion</div><div class="limit-grid limit-grid-3">'+dayOpts+'</div>' +
+    '<div class="section-label">Voting Duration</div><div class="limit-grid limit-grid-3">'+voteOpts+'</div>' +
+    '<button class="btn btn-cream btn-block" onclick="submitHostSetup()">CREATE GAME</button></div>';
+}
+function submitHostSetup(){ state.hostSetup.name = document.getElementById('hostName').value; localStorage.setItem('mafia_saved_name', state.hostSetup.name); createRoom(); }
+
+function screenLobby(){
+  const r = state.room;
+  const byClan = {}; state.clans.forEach(c => byClan[c.id]=[]);
+  state.players.forEach(p => { if (byClan[p.clan_id]) byClan[p.clan_id].push(p); });
+  const groups = state.clans.map(c => {
+    if (!byClan[c.id].length) return '';
+    const rows = byClan[c.id].map(p => '<div class="player-row"><span style="display:flex;align-items:center;">'+avatarHtml(p)+p.name+'</span>' +
+      (p.is_host ? '<span class="tag">HOST</span>' : (state.isHost ? '<button class="link-btn" onclick="kickPlayer(\''+p.id+'\')">Remove</button>' : '')) + '</div>').join('');
+    return '<div class="clan-group"><div class="clan-group-head"><span class="dot" style="background:'+c.color+'"></span> '+c.name+'</div>'+rows+'</div>';
+  }).join('');
+  const minPlayers = 4; const canStart = state.players.length >= minPlayers;
+  const actionArea = state.isHost
+    ? '<button class="btn btn-danger btn-block" '+(canStart?'':'disabled')+' onclick="startGame()">START GAME</button>' +
+      (canStart ? '' : '<p class="helper" style="text-align:center;">Need at least '+minPlayers+' players to start.</p>')
+    : '<div class="banner" style="text-align:center;">Waiting for the host to start the game&hellip;</div>';
+  return topbar() + '<div class="content">' + errBanner() +
+    '<div class="room-code-box"><div class="room-code-label">Room</div><div class="room-code">'+r.code+'</div><button class="btn btn-sm" onclick="copyCode()">COPY CODE</button></div>' +
+    '<p class="helper">Share this code with your friends. This list updates live.</p>' +
+    '<div class="count-label">'+state.players.length+' Players &middot; Limit '+r.player_limit+'</div>' + groups + actionArea + '</div>';
+}
+
+function screenRole(){
+  return topbar() + '<div class="content">' + backRow('YOUR ROLE') +
+    '<div class="role-card"><div class="role-name display">'+state.myRole+(state.myLeader?' LEADER':'')+'</div><div class="role-desc">'+(ROLE_DESC[state.myRole]||'')+'</div></div>' +
+    '<p class="lede">Keep your role secret.</p>' +
+    '<button class="btn btn-cream btn-block" onclick="acknowledgeRole()">CONTINUE</button></div>';
+}
+function acknowledgeRole(){
+  localStorage.setItem('mafia_role_ack_'+state.room.id, 'true');
+  state.roleSeen = true;
+  render();
+}
+function screenSpectator(label){
+  return topbar() + '<div class="content">' + backRow(label) +
+    '<div class="banner">You\'re spectating this game &mdash; your clan isn\'t part of this match.</div></div>';
+}
+
+function screenNight(){
+  const r = state.room;
+  const me = state.players.find(p=>p.id===state.myPlayerId);
+  if (me.is_spectator) return screenSpectator('NIGHT '+r.round_number);
+  const hasAction = NIGHT_ROLES.indexOf(state.myRole)!==-1;
+  let body;
+  if (!me.alive){
+    body = '<div class="banner">You were eliminated. Watch how it unfolds.</div>';
+  } else if (!hasAction){
+    body = '<p class="lede">You have no action tonight.</p><div class="banner">Waiting for the night to end&hellip;</div>';
+  } else {
+    const prompt = state.myRole==='MAFIA' ? 'Choose someone to eliminate.' : 'Choose someone to protect.';
+    const candidates = state.players.filter(p => p.alive && !p.is_spectator && p.id !== state.myPlayerId);
+    const opts = candidates.map(p => '<div class="vote-opt '+(state.nightChoice===p.id?'selected':'')+'" onclick="submitNightTarget(\''+p.id+'\')">'+avatarHtml(p)+p.name+'</div>').join('');
+    body = '<p class="lede">'+prompt+'</p>' + opts;
+    if (state.nightChoice){
+      body += '<div class="banner">Action submitted. Waiting for the night to end&hellip;</div>';
+    }
+  }
+  const mafiaChat = (state.myTeam==='mafia' && me.alive) ? chatBox('mafia','MAFIA CHAT',true) : '';
+  const deadChat = !me.alive ? chatBox('dead','DEAD CHAT',true) : '';
+  return topbar() + '<div class="content">' + backRow('NIGHT '+r.round_number) + errBanner() + body + mafiaChat + deadChat +
+    '<p class="proto-note">This phase ends automatically.</p></div>';
+}
+
+function screenDay(){
+  const r = state.room; const lr = r.last_result;
+  const me = state.players.find(p=>p.id===state.myPlayerId);
+  if (me.is_spectator) return screenSpectator('DAY '+r.round_number);
+  const alive = state.players.filter(p=>p.alive && !p.is_spectator);
+  const dead = state.players.filter(p=>!p.alive && !p.is_spectator);
+  const nightNote = lr && lr.type==='night'
+    ? (lr.eliminated_name ? '<div class="banner">'+lr.eliminated_name+' was found eliminated overnight. They were '+lr.eliminated_role+'.</div>' : '<div class="banner">Everyone survived the night.</div>')
+    : '';
+  const aliveRows = alive.map(p=>'<div class="player-row"><span style="display:flex;align-items:center;">'+avatarHtml(p)+p.name+'</span></div>').join('') || '<p class="helper">No players remaining.</p>';
+  const deadRows = dead.map(p=>'<div class="player-row dim"><span style="display:flex;align-items:center;">'+avatarHtml(p)+p.name+'</span><span class="tag tag-out">OUT</span></div>').join('');
+  const deadChat = !me.alive ? chatBox('dead','DEAD CHAT',true) : '';
+  return topbar() + '<div class="content">' + backRow('DAY '+r.round_number) + errBanner() +
+    '<p class="lede">Discuss. Find the Mafia.</p>' + nightNote + chatBox('day','DAY CHAT', me.alive) + deadChat +
+    '<div class="count-label">Alive</div>' + aliveRows +
+    (deadRows ? '<div class="count-label" style="margin-top:18px;">Eliminated</div>' + deadRows : '') +
+    '<p class="proto-note">Voting opens automatically when discussion time runs out.</p></div>';
+}
+
+function screenVote(){
+  const me = state.players.find(p=>p.id===state.myPlayerId);
+  if (me.is_spectator) return screenSpectator('VOTE');
+  if (!me.alive) return topbar() + '<div class="content">' + backRow('VOTE') + '<div class="banner">You were eliminated and cannot vote.</div></div>';
+  let living = state.players.filter(p=>p.alive && !p.is_spectator && p.id!==state.myPlayerId);
+  const isRevote = state.room.vote_candidates && state.room.vote_candidates.length;
+  if (isRevote) living = living.filter(p => state.room.vote_candidates.includes(p.id));
+  const opts = living.map(p => '<div class="vote-opt '+(state.voteChoice===p.id?'selected':'')+'" onclick="submitVoteChoice(\''+p.id+'\')">'+avatarHtml(p)+p.name+'</div>').join('');
+  const revoteBanner = isRevote ? '<div class="banner">The vote was tied. Revote between the tied players.</div>' : '';
+  return topbar() + '<div class="content">' + backRow('VOTE') + errBanner() + revoteBanner +
+    '<p class="lede">Choose one player.</p>' + opts +
+    '<div class="banner">Individual votes stay hidden until voting ends. You can change your vote until the timer runs out.</div></div>';
+}
+
+function screenGameOver(){
+  const r = state.room;
+  const rows = state.finalRoles ? state.finalRoles.map(fr =>
+    '<div class="final-row"><span>'+fr.name+'</span><span style="color:var(--text-dim);">'+fr.role+'</span></div>').join('') : '<p class="helper">Loading final roles&hellip;</p>';
+  if (state.finalRoles === undefined){ state.finalRoles = null; loadFinalRoles(); }
+  const winClass = r.winner==='MAFIA' ? 'win-mafia' : r.winner==='JESTER' ? 'win-jester' : 'win-town';
+  const winText = r.winner==='MAFIA' ? 'MAFIA WINS' : r.winner==='JESTER' ? 'JESTER WINS' : 'TOWN WINS';
+  return topbar() + '<div class="content">' + backRow('GAME OVER') +
+    '<div class="win-banner '+winClass+'">'+winText+'</div>' +
+    '<div class="count-label" style="margin-top:20px;">Final Roles</div>' + rows +
+    '<div style="height:22px;"></div>' +
+    '<button class="btn btn-ghost btn-block" onclick="leaveRoom()">RETURN HOME</button></div>';
+}
+async function loadFinalRoles(){
+  const { data } = await sb.from('player_roles').select('role, players(name)').eq('room_id', state.room.id);
+  state.finalRoles = (data||[]).map(d => ({ name: d.players.name, role: d.role }));
+  render();
+}
+
+function chatBox(channel, label, canSend){
+  const draft = channel==='mafia' ? state.mafiaChatDraft : channel==='dead' ? state.deadChatDraft : state.chatDraft;
+  const msgs = state.messages.filter(m=>m.channel===channel);
+  const rows = msgs.map(m => { const p = state.players.find(pp=>pp.id===m.sender_player_id); return '<div class="chat-msg"><b>'+(p?p.name:'?')+':</b> '+escapeHtml(m.content)+'</div>'; }).join('') || '<p class="helper" style="margin:0;">No messages yet.</p>';
+  const inputRow = canSend
+    ? '<div class="chat-input-row"><input type="text" id="chatinput-'+channel+'" value="'+escapeAttr(draft)+'" placeholder="Message"/><button class="btn btn-sm" onclick="submitChat(\''+channel+'\')">SEND</button></div>'
+    : '<div class="chat-input-row"><span class="helper" style="margin:0;">Only living players can post here.</span></div>';
+  return '<div class="chat-box '+(channel==='mafia'?'chat-mafia':'')+'"><div class="chat-head">'+label+'</div>' +
+    '<div class="chat-log" id="chatlog-'+channel+'">'+rows+'</div>' + inputRow + '</div>';
+}
+function submitChat(channel){
+  const el = document.getElementById('chatinput-'+channel);
+  if (channel==='mafia') state.mafiaChatDraft = el.value; else if (channel==='dead') state.deadChatDraft = el.value; else state.chatDraft = el.value;
+  sendChat(channel);
+}
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+function render(){
+  if (SUPABASE_URL.includes('PASTE_') || SUPABASE_ANON_KEY.includes('PASTE_')){
+    document.getElementById('app').innerHTML = '<div class="topbar"><div class="logo">MAFIA</div></div>' +
+      '<div class="content" style="padding-top:60px;text-align:center;"><h2 style="font-size:20px;">One more thing</h2>' +
+      '<p class="lede">Paste your Supabase Project URL and anon key into the CONFIG section near the top of this file, then reload.</p></div>';
+    return;
+  }
+  let html;
+  if (state.room){
+    if (state.room.status === 'lobby') html = screenLobby();
+    else if (state.room.phase === 'gameover') html = screenGameOver();
+    else if (!state.roleSeen && !state.players.find(p=>p.id===state.myPlayerId)?.is_spectator) html = screenRole();
+    else if (state.room.phase === 'night') html = screenNight();
+    else if (state.room.phase === 'day') html = screenDay();
+    else if (state.room.phase === 'vote') html = screenVote();
+    else html = screenLobby();
+  } else if (state.screen === 'join') html = screenJoin();
+  else if (state.screen === 'host-setup') html = screenHostSetup();
+  else html = screenHome();
+  document.getElementById('app').innerHTML = html;
+  ['day','mafia','dead'].forEach(ch => {
+    const el = document.getElementById('chatinput-'+ch);
+    if (el) el.oninput = function(){ if (ch==='mafia') state.mafiaChatDraft = this.value; else if (ch==='dead') state.deadChatDraft = this.value; else state.chatDraft = this.value; };
+  });
+  ['chatlog-day','chatlog-mafia','chatlog-dead'].forEach(id => { const el=document.getElementById(id); if (el) el.scrollTop = el.scrollHeight; });
+}
+
+boot();
+</script>
+</body>
+</html>
